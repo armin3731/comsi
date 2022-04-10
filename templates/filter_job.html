@@ -1,0 +1,73 @@
+{% extends 'layout.html' %}
+
+{% block div %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Signaling Metabolites Properties</h1>
+</div>
+
+
+
+<form action = "/submit_job" method = "POST" enctype="multipart/form-data">
+
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom col-4 ">
+    <h6 class="h5">Data Information :</h6>
+  </div>
+
+  <div class="col-4 ">
+    <label for="model_name" class="form-label">Description :</label>
+    <input class="form-control" type="text" value="" aria-label="Disabled input example" name="description">
+  </div>
+  <br>
+  <div class="col-4 ">
+    <label for="model_name" class="form-label">Abundace ID :</label>
+    <input class="form-control" type="text" value="{{abundance_id}}" aria-label="Disabled input example" name="selected_abundance_id" readonly>
+  </div>
+  <br>
+  <div class="col-4 ">
+    <label for="model_name" class="form-label">UPEX ID :</label>
+    <input class="form-control" type="text" value="{{upex_id}}" aria-label="Disabled input example" name="selected_upex_id"  readonly>
+  </div>
+  <br>
+  <div class="col-4 ">
+    <label for="model_name" class="form-label">META-Data ID :</label>
+    <input class="form-control" type="text" value="{{metadata_id}}" aria-label="Disabled input example" name="selected_metadata_id"  readonly>
+  </div>
+  <br>
+
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom col-4 ">
+    <h6 class="h5">Comparison Factor :</h6>
+  </div>
+  <div class="col-4">
+    <label for="model_name" class="form-label-comparison_factor">Comparison Factor:</label>
+         <select class="form-select" aria-label="Default select example" name="comparison_factor">
+            {% for each_sample in filter_dict%}
+              <option value="{{each_sample}}">{{each_sample}}</option>
+            {% endfor %}
+          </select>
+          <br>
+    </div>
+
+
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom col-4 ">
+    <h6 class="h5">Filter Data :</h6>
+  </div>
+  {% for each_sample in filter_dict%}
+  <div class="col-4">
+    <label for="model_name" class="form-label-{{each_sample}}">{{each_sample}}:</label>
+         <select class="form-select" aria-label="Default select example" name="{{each_sample}}">
+           <option value="" selected> -- </option>
+           {% for each_factor in filter_dict[each_sample] %}
+            <option value="{{each_factor}}">{{each_factor}}</option>
+          {% endfor %}
+          </select>
+          <br>
+    </div>
+  {% endfor %}
+
+
+         <input type = "submit" class="btn btn-primary"/>
+         <br><br>
+</form>
+
+
+{% endblock %}

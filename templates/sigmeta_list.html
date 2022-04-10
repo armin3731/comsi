@@ -1,0 +1,110 @@
+
+{% extends 'layout.html' %}
+<!--file_id,upload_date,method,parameters,pickle_address,status,details-->
+{% block div %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Signaling Metabolites</h1>
+</div>
+<!--<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" >Upload Dataset</button>-->
+<!-- <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" ><i class="bi bi-plus-lg"></i> Submit New Job</button> -->
+<!-- <a href="/submit_job" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Submit New Job</a> -->
+<table class="table">
+  <thead class="thead-dark">
+    <tr>
+      <th scope="col">Job ID</th>
+      <th scope="col">Submit Date</th>
+      <th scope="col">Comparison Factor</th>
+      <th scope="col">Description</th>
+      <th scope="col">Excel</th>
+      <th scope="col">Network</th>
+      <th scope="col">Plot</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for each_process_row in process_list %}
+
+  <tr>
+    <td>{{each_process_row[1]}}</td>
+    <td>{{each_process_row[2]}}</td>
+    <td>{{each_process_row[5]}}</td>
+    <td>{{each_process_row[6]}}</td>
+    <td>
+      <span>
+          <a href="/sigmeta_excel/{{each_process_row[1]}}/" class="btn btn-success btn-sm" title="Download Excel file"><i class="bi bi-file-earmark-spreadsheet"></i></a>
+      </span>
+    </td>
+    <td>
+      <span>
+        <a href="/networkshow/con_meta/{{each_process_row[1]}}/" class="btn btn-primary btn-sm" title="Condition-Metabolite Network"><i class="bi bi-diagram-3-fill"></i></a>
+        <a href="/networkshow/sp_meta/{{each_process_row[1]}}/" class="btn btn-info btn-sm" title="Species-Metabolite Network"><i class="bi bi-diagram-2-fill"></i></a>
+      </span>
+    </td>
+    <td>
+      <span>
+        <a href="/paretoplot/{{each_process_row[1]}}/" class="btn btn-warning btn-sm" title="ParetoPlot"><i class="bi bi-bar-chart-line-fill"></i></a>
+      </span>
+    </td>
+
+        {% endfor %}
+
+
+
+
+
+
+
+<!-- Modal -->
+
+<form method="POST" action="/filter_job">
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Submit New Job</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+
+              <div class="mb-3">
+                <label for="gamma_val" class="form-label">Job Type:</label>
+                <select class="form-select" aria-label="Default select example" name="job_type">
+                    <option value="signaling_meta" selected>Signaling Metabolites</option>
+                    <!-- <option value="bac_influence">Bacteria Influences</option> -->
+                  </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="gamma_val" class="form-label">Abundance Database:</label>
+                <select class="form-select" aria-label="Default select example" name="selected_abundance_id">
+                  {% for each_abundance in abundance_ids %}
+                    <option value="{{each_abundance.split('-')[0]}}">{{each_abundance}}</option>
+                  {% endfor %}
+                  </select>
+              </div>
+              <div class="mb-3">
+                <label for="gamma_val" class="form-label">UPEX Database:</label>
+                <select class="form-select" aria-label="Default select example" name="selected_upex_id">
+                  {% for each_upex in upex_ids %}
+                    <option value="{{each_upex.split('-')[0]}}">{{each_upex}}</option>
+                  {% endfor %}
+                  </select>
+              </div>
+              <div class="mb-3">
+                <label for="gamma_val" class="form-label">META-Data Database:</label>
+                <select class="form-select" aria-label="Default select example" name="selected_metadata_id">
+                  {% for each_metadata in metadata_ids %}
+                    <option value="{{each_metadata.split('-')[0]}}">{{each_metadata}}</option>
+                  {% endfor %}
+                  </select>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button class="btn btn-primary" type="submit" >Confirm</button>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    </form>
+
+{% endblock %}
