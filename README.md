@@ -1,4 +1,4 @@
-# NOTE: Right now, ComSi is not availble for public use. Here is just README file and apllication descriptions.
+# NOTE: Right now, ComSi is not availble for public use. Here is just the README file and apllication descriptions.
 
 
 # ComSi - Community Signaling Metabolites Identifier
