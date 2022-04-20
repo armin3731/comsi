@@ -1,6 +1,0 @@
-openpyxl
-scipy
-networkx
-numpy
-Flask
-pandas==1.2.4
