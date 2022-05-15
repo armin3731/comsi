@@ -40,6 +40,7 @@
   <div class="col-4">
     <label for="model_name" class="form-label-comparison_factor">Comparison Factor:</label>
          <select class="form-select" aria-label="Default select example" name="comparison_factor">
+              <option value="ONE_DIMENSIONAL">-- ONE DIMENSIONAL --</option>
             {% for each_sample in filter_dict%}
               <option value="{{each_sample}}">{{each_sample}}</option>
             {% endfor %}

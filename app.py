@@ -292,18 +292,15 @@ def testpage():
     # upex_id = process_list['upex'].loc[job_id]
     # metadata_id = process_list['metadata'].loc[job_id]
                                                                         #abundance_id
-    abundance_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],'af93bf364eaf') ,header=0, index_col=0)
-    upex_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],'0f6d58a760cc') ,header=0, index_col=0)
-    metadata_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],'99b5b30c49a7') ,header=0, index_col=0)
+    abundance_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],'DBffb96ab62ae0') ,header=0, index_col=0)
+    upex_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],'DBcb4d26fe0faf') ,header=0, index_col=0)
+    metadata_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],'DBa2017f963c12') ,header=0, index_col=0)
 
     filter_params = {
-        'body_site': '',
-        'country' : 'USA',
-        'health_status' : 'P'
 
     }
-    comp_fact = 'host_phenotype'
-    comp_fact_value = comparison_combine_v2_Bugsfixed(comp_fact,'99b5b30c49a7',filter_params)
+    comp_fact = 'ONE_DIMENSIONAL'
+    comp_fact_value = comparison_combine_v3_OneDim(comp_fact,'99b5b30c49a7',filter_params)
 
     Signaling_Metabolite_v9(job_id, abundance_df,upex_df,metadata_df,filter_params,comp_fact, comp_fact_value)
 
@@ -449,7 +446,7 @@ def filter_job_listprep(metadata_id):
 #end filter_job_listprep============================
 
 # comparison_combine================================
-def comparison_combine_v2_Bugsfixed(comparison_factor,metadata_id ,filter_params):
+def comparison_combine_v3_OneDim(comparison_factor,metadata_id ,filter_params):
     '''
     Combine different situations for calculating Signaling Metabolite
 
@@ -459,18 +456,21 @@ def comparison_combine_v2_Bugsfixed(comparison_factor,metadata_id ,filter_params
     Output(s):
      combined_comparison_factor : combined comparison_factor two by two
     '''
+    if comparison_factor != 'ONE_DIMENSIONAL':
+        metadata_ADDRESS = os.path.join(app.config['UPLOAD_FOLDER'],metadata_id.strip())
+        metadata_df = pd.read_csv(metadata_ADDRESS ,header=0, index_col=0)#Load META-Data
 
-    metadata_ADDRESS = os.path.join(app.config['UPLOAD_FOLDER'],metadata_id.strip())
-    metadata_df = pd.read_csv(metadata_ADDRESS ,header=0, index_col=0)#Load META-Data
+        metadata_df_filtered = filter_data_aundance_v5_AbunMetaBOTH(pd.DataFrame(), metadata_df, filter_params, None, None)
 
-    metadata_df_filtered = filter_data_aundance_v5_AbunMetaBOTH(pd.DataFrame(), metadata_df, filter_params, None, None)
+        columns = metadata_df_filtered.columns.to_list()
 
-    columns = metadata_df_filtered.columns.to_list()
-
-    if comparison_factor in columns:
-        combined_comparison_factor = combine(unique(metadata_df_filtered[comparison_factor].to_list()))
-    else:
-        combined_comparison_factor = None
+        if comparison_factor in columns:
+            combined_comparison_factor = combine(unique(metadata_df_filtered[comparison_factor].to_list()))
+        else:
+            combined_comparison_factor = None
+    else: # comparison_factor == 'ONE_DIMENSIONAL'
+        combined_comparison_factor = ['ONE_DIMENSIONAL','ONE_DIMENSIONAL']#two 'ONE_DIMENSIONAL' because in datadiff process we need two of them to
+                                                                          #find datadiff1 and datadiff2
 
     return combined_comparison_factor
 #end comparison_combine=============================
@@ -516,7 +516,7 @@ def limited_f(job_id): #this function just runs 3 chained for-loops and then ret
         metadata_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],metadata_id) ,header=0, index_col=0)
 
 
-        comp_fact_value = comparison_combine_v2_Bugsfixed(comp_fact, metadata_id,filter_params)
+        comp_fact_value = comparison_combine_v3_OneDim(comp_fact, metadata_id,filter_params)
 
         Signaling_Metabolite_v9(job_id, abundance_df,upex_df,metadata_df,filter_params,comp_fact, comp_fact_value)
 

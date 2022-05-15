@@ -125,7 +125,7 @@ def Signaling_Metabolite_v9(job_id, dataframe_abundance, dataframe_metabolite, d
     #     try:
         print(each_comp_fact,'*-*-*-*-*-*-*-*-*--*-*')
         Metabolite_Score_eachpopulation = []
-        dataframe_abundance1,dataframe_abundance2, dataframe_metabolite_corrected = diff_data_creator_v5_filter_params(dataframe_abundance, dataframe_metabolite, dataframe_metadata,
+        dataframe_abundance1,dataframe_abundance2, dataframe_metabolite_corrected = diff_data_creator_v6_OneDim(dataframe_abundance, dataframe_metabolite, dataframe_metadata,
                                                                                                             filter_params=filter_params, comp_fact=comp_fact ,comp_fact_value=each_comp_fact)
 
         Metabolite_Score_eachpopulation, _ = iterative_zscore(dataframe_abundance1,dataframe_abundance2,dataframe_metabolite_corrected,G_metabolic,sample_number=Sample_number,iteration=Iteration_number)
@@ -140,13 +140,13 @@ def Signaling_Metabolite_v9(job_id, dataframe_abundance, dataframe_metabolite, d
 
 
 
-def diff_data_creator_v5_filter_params(dataframe_abundance, dataframe_metabolite, dataframe_metadata,filter_params, comp_fact ,comp_fact_value):
+def diff_data_creator_v6_OneDim(dataframe_abundance, dataframe_metabolite, dataframe_metadata,filter_params, comp_fact ,comp_fact_value):
 
-    # print('Samples in df_Abundance : ', len(dataframe_abundance.columns))
-    dataframe_abundance1 = filter_data_aundance_v5_AbunMetaBOTH(dataframe_abundance.copy(), dataframe_metadata.copy() ,
+    print('Samples in df_Abundance1 : ', len(dataframe_abundance.columns))
+    dataframe_abundance1 = filter_data_aundance_v6_OneDim(dataframe_abundance.copy(), dataframe_metadata.copy() ,
                                                                filter_params, comp_fact ,comp_fact_value[0])
-    # print('Samples in df_Abundance : ', len(dataframe_abundance.columns))
-    dataframe_abundance2 = filter_data_aundance_v5_AbunMetaBOTH(dataframe_abundance.copy(), dataframe_metadata.copy() ,
+    print('Samples in df_Abundance2 : ', len(dataframe_abundance.columns))
+    dataframe_abundance2 = filter_data_aundance_v6_OneDim(dataframe_abundance.copy(), dataframe_metadata.copy() ,
                                                                filter_params, comp_fact ,comp_fact_value[1])
     print('total Metabolites : ', len(dataframe_metabolite.index))
 
@@ -195,7 +195,10 @@ def diff_data_creator_v5_filter_params(dataframe_abundance, dataframe_metabolite
 # def signaling_meta_calculation(abun_path,upex_path,meta_path):
 
 
-def filter_data_aundance_v5_AbunMetaBOTH(dataframe_abundance, dataframe_metadata, filter_params, comp_fact, comp_fact_value):
+def filter_data_aundance_v6_OneDim(dataframe_abundance, dataframe_metadata, filter_params, comp_fact, comp_fact_value):
+    if comp_fact=='ONE_DIMENSIONAL': #if it is ONE_DIMENSIONAL there is no need for filters
+        filtered_df = dataframe_abundance
+        return filtered_df
     if (not comp_fact==None) or (not comp_fact_value==None):
         filter_params[comp_fact] = comp_fact_value
     acceptable_filter_params = {}
@@ -243,8 +246,8 @@ def iterative_zscore(dataframe_abundance1,dataframe_abundance2,dataframe_metabol
         print('There are not %i Samples in dataframe_abundance2'%(sample_number))
         sample_number = len(dataframe_abundance2.columns)
     print('Sample number is %i'%(sample_number))
-    if sample_number<2: #for One-Dimension situation not happen
-        print('Only Comparison Factors with more than 1 sample is acceptable')
+    if sample_number<1: #for One-Dimension situation not happen
+        print('Empty Data is not acceptable')
         return None, None
 
     #Iterative Z_Score Calculation
@@ -255,17 +258,24 @@ def iterative_zscore(dataframe_abundance1,dataframe_abundance2,dataframe_metabol
         df_abundance2 = dataframe_abundance2.sample(n=sample_number,axis='columns')
 
         #Rename Sample names (to find difference)
-        diff_column_names = []
-        for i in range(sample_number):
-            diff_column_names.append('Sample%i'%(i))
-        df_abundance1.columns = diff_column_names
-        df_abundance2.columns = diff_column_names
+        if sample_number != 1: #Checks if it should consider One_dim or Multi_dim Signaling_Metabolite
+            diff_column_names = []
+            for i in range(sample_number):
+                diff_column_names.append('Sample%i'%(i))
+            df_abundance1.columns = diff_column_names
+            df_abundance2.columns = diff_column_names
 
-        df_diff_data = abs(df_abundance1-df_abundance2)
+            df_diff_data = abs(df_abundance1-df_abundance2)
+        else: #sample_number == 1
+            df_diff_data = df_abundance1
+            df_diff_data.columns = ['p_values']
+
 
         for each_metabolite in dataframe_metabolite.index.to_list():
-            # print('HEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEY')
-            Z_metabolite_value, Z_metabolite_OneByOne = Z_meta_Calculator_NOinf_v2(G_metabolic, each_metabolite, df_diff_data, No_inverse=False)
+            if sample_number != 1:
+                Z_metabolite_value, _ = Z_meta_Calculator_NOinf_v2(G_metabolic, each_metabolite, df_diff_data, Multi_dim=True)
+            else: #sample_number == 1
+                Z_metabolite_value, _ = Z_meta_Calculator_NOinf_v2(G_metabolic, each_metabolite, df_diff_data, Multi_dim=False)
             # print('Z_metabolite_value',Z_metabolite_value)
             #print(Z_metabolite_OneByOne)
             if not math.isnan(Z_metabolite_value):
@@ -284,42 +294,47 @@ def iterative_zscore(dataframe_abundance1,dataframe_abundance2,dataframe_metabol
 
 
 def Z_meta_Calculator_NOinf_v2(G, metabolite, dataframe_abundance, Multi_dim=True,
-                               No_inverse=False, Corr_method='spearman'):
+                              Corr_method='spearman'):
     if Multi_dim == False :
 #         for one dimentional situation
-        Z_ni_sum = 0.
+        Z_ej_all = []
         connected_species = list(G.neighbors(metabolite))
         for each_conncted_species in connected_species:
-            if G.nodes[each_conncted_species]['type'] == 'Spc':
-                Z_ni_sum += G.nodes[each_conncted_species]['Z_ni']
-            else:
-                print('Error! Graph structure is not corret \n A metabolite is connected to another metabolite')
-        Z_meta = Z_ni_sum/np.sqrt(len(connected_species))
-        return Z_meta
-    else:
+            Z_ej_all.append(dataframe_abundance['p_values'].loc[each_conncted_species])
+
+        Z_ej_sum = [np.abs(stats.norm.ppf(np.double(1-x))) for x in Z_ej_all]
+        # Z_ej_sum = np.array(Z_ej_sum)
+        # Z_ej_sum = stats.norm.ppf(Z_ej_sum)
+
+        Z_meta = np.sum(np.abs(Z_ej_sum))/np.sqrt(len(Z_ej_sum))
+        Z_scores_OneByOne = [str(np.abs(np.double(x))) for x in Z_ej_all]
+        return Z_meta, Z_scores_OneByOne
+    else: #Multi_dim == True
 #         for multi dimentional situation
-        Z_ej_sum = 0.
         Z_ej_all = []
         connected_species = list(G.neighbors(metabolite))
         # print('connected_species',connected_species)
         for i_each_conncted_species in range(len(connected_species)):
-            each_conncted_species = connected_species[i_each_conncted_species]
+            iname_each_conncted_species = connected_species[i_each_conncted_species]
             for j_each_conncted_species in range(i_each_conncted_species,len(connected_species)):
+                jname_each_conncted_species = connected_species[j_each_conncted_species]
                 if i_each_conncted_species==j_each_conncted_species: continue
+                # try: #in case when a connected species is not available for this comp_fact_comb
                 if Corr_method=='spearman':
                     # print('dataframe_abundance',dataframe_abundance)
                     # print('dataframe_abundance.iloc[j_each_conncted_species].to_list()',dataframe_abundance.iloc[j_each_conncted_species].to_list())
-                    Pj = np.abs(spearmanr(dataframe_abundance.iloc[i_each_conncted_species].to_list(),
-                                          dataframe_abundance.iloc[j_each_conncted_species].to_list())[0])
+                    Pj = np.abs(spearmanr(dataframe_abundance.loc[iname_each_conncted_species].to_list(),
+                                          dataframe_abundance.loc[jname_each_conncted_species].to_list())[0])
                 elif Corr_method=='pearson':
-                    Pj = np.abs(pearsonr(dataframe_abundance.iloc[i_each_conncted_species].to_list(),
-                                         dataframe_abundance.iloc[j_each_conncted_species].to_list())[0])
-                if No_inverse==False:
-                    Z_ej = stats.norm.ppf(Pj)
-                else:
-                    Z_ej = Pj
+                    Pj = np.abs(pearsonr(dataframe_abundance.loc[iname_each_conncted_species].to_list(),
+                                         dataframe_abundance.loc[jname_each_conncted_species].to_list())[0])
+                # except:
+                #     continue
+                # if No_inverse==False:
+                #     Z_ej = stats.norm.ppf(Pj)
+                # else:
+                Z_ej = np.abs(Pj)
                 Z_ej_all.append(Z_ej)
-#                 Z_ej_sum += Z_ej
 #                 print(Pj)
         Z_ej_sum = [np.abs(np.double(x)) for x in Z_ej_all]
         Z_ej_sum = np.array(Z_ej_sum)
@@ -339,6 +354,8 @@ def Zscore_metabolite_correcter(Metabolite_Scores,k=25,iterations=20):
     metabolites = list(Metabolite_Scores.keys())
     mu_k_itrations = []
     sigma_k_itrations = []
+    if k>len(metabolites):
+        k = len(metabolites)
 
     for i in range(iterations):
         np.random.seed()
