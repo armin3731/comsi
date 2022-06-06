@@ -6,10 +6,16 @@ import time
 import uuid
 import multiprocessing as mp
 import os
-from app_files.mathematical_funcs import *
+import sys
+sys.path.append('app_files')
+sys.path.append(os.path.join('app_files','sparcc_master'))
+from mathematical_funcs import Signaling_Metabolite_v9, unique, filter_data_aundance_v6_OneDim, file_exceler_SigMeta
+from mathematical_funcs2 import Bacteria_Influence_v1
+
 
 
 # Configurations **********************************************************
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'DontTellAnyOne'
 app.config['UPLOAD_FOLDER'] = 'Upload_folder'
@@ -180,7 +186,7 @@ def filter_job():
         upex_id = request.form['selected_upex_id']
         metadata_id = request.form['selected_metadata_id']
         filter_dict = filter_job_listprep(metadata_id)
-        return render_template('filter_job.html',filter_dict=filter_dict,abundance_id=abundance_id,upex_id=upex_id,metadata_id=metadata_id  )
+        return render_template('filter_job.html',filter_dict=filter_dict,abundance_id=abundance_id,upex_id=upex_id,metadata_id=metadata_id,job_type=job_type  )
     return redirect(url_for('manage_job'))
 #end manage_job page============================
 
@@ -238,6 +244,19 @@ def sigmeta_list():
     process_list = process_list[process_list['model_type']=='signaling_meta']
     process_list_records = process_list.to_records()#Convert dataframe to records for easier use with render_template
     return render_template('sigmeta_list.html',process_list=process_list_records)
+#end sigmeta_list page==========================
+
+#bacteria_list page==============================
+# Presenting Bacteria Influences Results
+@app.route("/bacteria_list")
+def bacteria_list():
+    # Load process_list to show on the table
+    process_list = pd.read_csv(process_list_ADDRESS ,header=0,  low_memory=False, sep=',')#Load all process
+    process_list = process_list[['job_id','submit_date','model_type','progress','comparison_factor','description']]
+    process_list = process_list[process_list['progress']=='Finished']
+    process_list = process_list[process_list['model_type']=='bac_influence']
+    process_list_records = process_list.to_records()#Convert dataframe to records for easier use with render_template
+    return render_template('bacteria_list.html',process_list=process_list_records)
 #end sigmeta_list page==========================
 
 #sigmeta_excel page==============================
@@ -299,12 +318,13 @@ def testpage():
     filter_params = {
 
     }
-    comp_fact = 'ONE_DIMENSIONAL'
-    comp_fact_value = comparison_combine_v3_OneDim(comp_fact,'99b5b30c49a7',filter_params)
+    comp_fact = ''
+    comp_fact_value = comparison_combine_v3_OneDim(comp_fact,'DBa2017f963c12',filter_params)
 
-    Signaling_Metabolite_v9(job_id, abundance_df,upex_df,metadata_df,filter_params,comp_fact, comp_fact_value)
+    #TODO first filter abundance data
+    Bacteria_Influence_v1(job_id, abundance_df,upex_df,metadata_df,filter_params,comp_fact, comp_fact_value)
 
-    file_exceler_SigMeta(job_id)
+    # file_exceler_SigMeta(job_id)
 
     return redirect(url_for('home'))
 #end Test page==================================
@@ -358,14 +378,13 @@ def append_process_id(data):
     # count_user_pending_process  = count_pending_jobs(session['username'])# number of pendig process for the logged in user
     # if count_user_pending_process < session['max_pending_prss']: # Checks if the user is able to submit a new job or not
     process_job = { #New job
-        'job_id' : 'JOB' + str(uuid.uuid4())[:10],
+        'job_id' : 'JOB' + str(uuid.uuid4())[:13],
         'submit_date' : dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        'model_type' : 'signaling_meta',# this is either 'signaling_meta' or 'bac_influence'
+        'model_type' : data['job_type'],# this is either 'signaling_meta' or 'bac_influence'
         'progress' : 'Pending...',
         'abundance' : data['selected_abundance_id'],
         'upex' : data['selected_upex_id'],
         'metadata' : data['selected_metadata_id'],
-        #TODO : Filter should be more structured
         'comparison_factor': data['comparison_factor'],
         'filter_params' : str(filter_params),
         'description' : data['description']
@@ -456,11 +475,11 @@ def comparison_combine_v3_OneDim(comparison_factor,metadata_id ,filter_params):
     Output(s):
      combined_comparison_factor : combined comparison_factor two by two
     '''
-    if comparison_factor != 'ONE_DIMENSIONAL':
+    if (comparison_factor != 'ONE_DIMENSIONAL') or (comparison_factor != ''):
         metadata_ADDRESS = os.path.join(app.config['UPLOAD_FOLDER'],metadata_id.strip())
         metadata_df = pd.read_csv(metadata_ADDRESS ,header=0, index_col=0)#Load META-Data
 
-        metadata_df_filtered = filter_data_aundance_v5_AbunMetaBOTH(pd.DataFrame(), metadata_df, filter_params, None, None)
+        metadata_df_filtered = filter_data_aundance_v6_OneDim(pd.DataFrame(), metadata_df, filter_params, None, None)
 
         columns = metadata_df_filtered.columns.to_list()
 
@@ -503,26 +522,36 @@ def combine(list1):
 
 # limited_f=========================================
 def limited_f(job_id): #this function just runs 3 chained for-loops and then returns the input_x
-    try:
-        process_list = pd.read_csv(process_list_ADDRESS ,header=0, index_col=0, low_memory=False, sep=',')#Load all process
-        abundance_id = process_list['abundance'].loc[job_id].strip()
-        upex_id = process_list['upex'].loc[job_id].strip()
-        metadata_id = process_list['metadata'].loc[job_id].strip()
-        filter_params = eval(process_list['filter_params'].loc[job_id])
-        comp_fact = process_list['comparison_factor'].loc[job_id].strip()
+    # try:
+    process_list = pd.read_csv(process_list_ADDRESS ,header=0, index_col=0, low_memory=False, sep=',')#Load all process
+    abundance_id = process_list['abundance'].loc[job_id].strip()
+    upex_id = process_list['upex'].loc[job_id].strip()
+    metadata_id = process_list['metadata'].loc[job_id].strip()
+    filter_params = eval(process_list['filter_params'].loc[job_id])
+    comp_fact = process_list['comparison_factor'].loc[job_id]#.strip()
+    if comp_fact==None:
+        comp_fact = ''
+    else:
+        comp_fact = str(comp_fact).strip()
+    job_type = process_list['model_type'].loc[job_id].strip()
 
-        abundance_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],abundance_id) ,header=0, index_col=0)
-        upex_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],upex_id) ,header=0, index_col=0)
-        metadata_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],metadata_id) ,header=0, index_col=0)
+    abundance_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],abundance_id) ,header=0, index_col=0)
+    upex_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],upex_id) ,header=0, index_col=0)
+    metadata_df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],metadata_id) ,header=0, index_col=0)
 
 
-        comp_fact_value = comparison_combine_v3_OneDim(comp_fact, metadata_id,filter_params)
+    comp_fact_value = comparison_combine_v3_OneDim(comp_fact, metadata_id,filter_params)
 
+    if job_type=='signaling_meta':
         Signaling_Metabolite_v9(job_id, abundance_df,upex_df,metadata_df,filter_params,comp_fact, comp_fact_value)
-
         file_exceler_SigMeta(job_id)
-    except:
-        failed_jobs_correction()
+    elif job_type=='bac_influence':
+        print('I am at bac_influence Algorithm')
+        Bacteria_Influence_v1(job_id, abundance_df,upex_df,metadata_df,filter_params,comp_fact, comp_fact_value)
+
+
+    # except:
+    #     failed_jobs_correction()
 
     return job_id
 #end limited_f======================================

@@ -2,7 +2,7 @@
 
 {% block div %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Signaling Metabolites Properties</h1>
+  <h1 class="h2">Process Properties</h1>
 </div>
 
 
@@ -16,6 +16,11 @@
   <div class="col-4 ">
     <label for="model_name" class="form-label">Description :</label>
     <input class="form-control" type="text" value="" aria-label="Disabled input example" name="description">
+  </div>
+  <br>
+  <div class="col-4 ">
+    <label for="model_name" class="form-label">Job Type :</label>
+    <input class="form-control" type="text" value="{{job_type}}" aria-label="Disabled input example" name="job_type" readonly>
   </div>
   <br>
   <div class="col-4 ">
@@ -34,6 +39,7 @@
   </div>
   <br>
 
+{% if not job_type=='bac_influence' %}
   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom col-4 ">
     <h6 class="h5">Comparison Factor :</h6>
   </div>
@@ -47,7 +53,15 @@
           </select>
           <br>
     </div>
+{% else %}
 
+<div class="invisible col-4">
+       <select class="form-select" aria-label="Default select example" name="comparison_factor">
+            <option value="">-- No Comp Factor --</option>
+        </select>
+        <br>
+  </div>
+{% endif %}
 
   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom col-4 ">
     <h6 class="h5">Filter Data :</h6>
